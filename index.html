@@ -11,24 +11,17 @@ body{margin:0;overflow:hidden;background:#050907;color:white;font-family:Arial,s
 #hud{position:fixed;inset:0;pointer-events:none}
 #top{position:absolute;top:14px;left:14px;text-shadow:0 2px 8px black;font-weight:bold}
 #status{color:#9cff9c;font-size:13px;margin-top:6px}
-#computer{
- position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
- width:min(420px,92vw);background:#101914;border:3px solid #66836a;
- border-radius:12px;padding:18px;display:none;pointer-events:auto;
- box-shadow:0 0 35px #000;
-}
+#computer{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);background:#101914;border:3px solid #66836a;border-radius:12px;padding:18px;display:none;pointer-events:auto;box-shadow:0 0 35px #000}
 #computer h2{margin:0 0 8px;color:#b9ffb5;letter-spacing:3px}
 #computer p{color:#c5d0c5;font-size:13px}
 #computer input{width:100%;padding:12px;margin:5px 0;background:#050b07;color:#baffb6;border:1px solid #6e956f;font-size:17px}
 #computer .choice{padding:12px;margin:7px 0;background:#1b2a20;border:1px solid #526c56;cursor:pointer;color:#d9ffd5}
 #computer .choice:hover{background:#304b35}
 #computer small{color:#9aab9a}
-#vr{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);pointer-events:auto;
- padding:13px 24px;border:1px solid #9cff9c;background:#122318;color:#d9ffd5;
- font-weight:bold;border-radius:8px;font-size:16px}
+#vr{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);pointer-events:auto;padding:13px 24px;border:1px solid #9cff9c;background:#122318;color:#d9ffd5;font-weight:bold;border-radius:8px;font-size:16px}
 #help{position:absolute;bottom:18px;left:14px;font-size:12px;color:#d1d8d1;text-shadow:0 2px 5px black}
 #crosshair{position:absolute;left:50%;top:50%;width:5px;height:5px;background:white;border-radius:50%;opacity:.7}
-#notice{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);color:#caffc6;text-shadow:0 2px 5px black}
+#notice{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);color:#caffc6;text-shadow:0 2px 5px black;text-align:center;max-width:90vw}
 </style>
 </head>
 <body>
@@ -36,7 +29,8 @@ body{margin:0;overflow:hidden;background:#050907;color:white;font-family:Arial,s
  <div id="top">GORILLA HORROR V1<div id="status">Starting...</div></div>
  <div id="crosshair"></div>
  <div id="notice"></div>
- <div id="help">WASD: move · Mouse: look · E: computer · Click: lock mouse</div>
+ <div id="scare" style="display:none;position:absolute;inset:0;background:radial-gradient(circle,#6b0000 0%,#120000 45%,#000 100%);color:#ff2424;align-items:center;justify-content:center;text-align:center;font-size:clamp(38px,10vw,110px);font-weight:900;letter-spacing:8px;text-shadow:0 0 25px red;z-index:20;pointer-events:none">THE HOLLOW</div>
+ <div id="help">Desktop: WASD + mouse · VR: push with your hands · E: computer</div>
  <button id="vr">ENTER VR</button>
  <div id="computer">
   <h2>GH COMPUTER</h2>
@@ -49,7 +43,7 @@ body{margin:0;overflow:hidden;background:#050907;color:white;font-family:Arial,s
   <input id="playerName" maxlength="16" placeholder="GORILLA">
   <p>COLOR CODE (3 DIGITS)</p>
   <input id="colorCode" maxlength="3" inputmode="numeric" value="123">
-  <small>Use the keyboard to enter your name, room code, and color.</small>
+  <small>Your Firebase player ID is saved automatically by Anonymous Authentication.</small>
   <div class="choice" id="save">SAVE NAME + COLOR</div>
   <div class="choice" id="close">CLOSE COMPUTER</div>
  </div>
@@ -57,42 +51,55 @@ body{margin:0;overflow:hidden;background:#050907;color:white;font-family:Arial,s
 
 <script type="module">
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
 import {
- getDatabase, ref, set, update, onValue, onDisconnect, remove
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+ getDatabase,ref,set,update,get,onValue,onDisconnect,remove
+} from "https://www.gstatic.com/firebasejs/13.3.0/firebase-database.js";
+import {
+ getAuth,setPersistence,browserLocalPersistence,signInAnonymously
+} from "https://www.gstatic.com/firebasejs/13.3.0/firebase-auth.js";
 
-/* -------------------------------------------------------
-   FIREBASE SETUP
-   Replace these example values with your Firebase project
-   configuration. Enable Realtime Database in Firebase.
--------------------------------------------------------- */
-const firebaseConfig = {
- apiKey: "PASTE_YOUR_API_KEY",
- authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
- databaseURL: "https://PASTE_YOUR_PROJECT-default-rtdb.firebaseio.com",
- projectId: "PASTE_YOUR_PROJECT",
- storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
- messagingSenderId: "PASTE_YOUR_SENDER_ID",
- appId: "PASTE_YOUR_APP_ID"
+const firebaseConfig={
+ apiKey:"AIzaSyBja698_LRIWtRY93PKjtxYuKATXCAARSM",
+ authDomain:"gorilla-horror.firebaseapp.com",
+ databaseURL:"https://gorilla-horror-default-rtdb.firebaseio.com",
+ projectId:"gorilla-horror",
+ storageBucket:"gorilla-horror.firebasestorage.app",
+ messagingSenderId:"160658459341",
+ appId:"1:160658459341:web:bd8f802bf917fdc818b784"
 };
 
-let db=null, firebaseReady=false;
-try{
- if(firebaseConfig.apiKey!=="PASTE_YOUR_API_KEY"){
-  const app=initializeApp(firebaseConfig);
-  db=getDatabase(app);
-  firebaseReady=true;
- }
-}catch(err){console.warn("Firebase setup needed:",err)}
+let db=null,auth=null,firebaseReady=false,playerId=null;
 
 const statusEl=document.getElementById("status");
 const noticeEl=document.getElementById("notice");
+const scareEl=document.getElementById("scare");
 const computer=document.getElementById("computer");
 const roomInput=document.getElementById("roomCode");
 const nameInput=document.getElementById("playerName");
 const colorInput=document.getElementById("colorCode");
 
+function say(message){
+ noticeEl.textContent=message;
+ setTimeout(()=>{if(noticeEl.textContent===message)noticeEl.textContent=""},3500);
+}
+function setStatus(message){statusEl.textContent=message}
+
+try{
+ const app=initializeApp(firebaseConfig);
+ db=getDatabase(app);
+ auth=getAuth(app);
+ await setPersistence(auth,browserLocalPersistence);
+ if(!auth.currentUser)await signInAnonymously(auth);
+ playerId=auth.currentUser.uid;
+ firebaseReady=true;
+ setStatus("Firebase connected · Loading player...");
+}catch(err){
+ console.error("Firebase startup error:",err);
+ setStatus("Firebase error · Check console");
+}
+
+/* 3D WORLD */
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x07120c);
 scene.fog=new THREE.FogExp2(0x07120c,0.035);
@@ -110,7 +117,9 @@ document.body.appendChild(renderer.domElement);
 
 scene.add(new THREE.HemisphereLight(0x9bb99c,0x182016,1.5));
 const moon=new THREE.DirectionalLight(0xc5d7c0,1.4);
-moon.position.set(-8,15,6);moon.castShadow=true;scene.add(moon);
+moon.position.set(-8,15,6);
+moon.castShadow=true;
+scene.add(moon);
 
 const materials={
  ground:new THREE.MeshStandardMaterial({color:0x17251a,roughness:1}),
@@ -123,18 +132,28 @@ const materials={
 
 function box(w,h,d,mat,x,y,z){
  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
- m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);return m;
+ m.position.set(x,y,z);
+ m.castShadow=true;
+ m.receiveShadow=true;
+ scene.add(m);
+ return m;
 }
 function cylinder(rt,rb,h,mat,x,y,z){
  const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,8),mat);
- m.position.set(x,y,z);m.castShadow=true;scene.add(m);return m;
+ m.position.set(x,y,z);
+ m.castShadow=true;
+ scene.add(m);
+ return m;
 }
 
-/* Forest floor */
+/* FOREST FLOOR */
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(300,300),materials.ground);
-floor.rotation.x=-Math.PI/2;floor.position.y=-.08;floor.receiveShadow=true;scene.add(floor);
+floor.rotation.x=-Math.PI/2;
+floor.position.y=-.08;
+floor.receiveShadow=true;
+scene.add(floor);
 
-/* Starting treehouse */
+/* TREEHOUSE STARTING AREA */
 box(8,.35,8,materials.wood,0,2.8,0);
 box(.25,3,.25,materials.bark,-3.5,1.3,-3.5);
 box(.25,3,.25,materials.bark,3.5,1.3,-3.5);
@@ -145,77 +164,167 @@ box(8,.25,.3,materials.wood,0,1.5,3.8);
 box(.3,.25,8,materials.wood,-3.8,1.5,0);
 box(.3,.25,8,materials.wood,3.8,1.5,0);
 
-/* Computer desk and monitor */
+/* COMPUTER DESK */
 box(2.4,.18,.9,materials.wood,0,1.3,-2.5);
 box(.18,1.2,.18,materials.wood,-.9,.7,-2.5);
 box(.18,1.2,.18,materials.wood,.9,.7,-2.5);
 box(1.5,1,.14,materials.metal,0,2,-2.75);
-const monitor=box(1.35,.78,.035,materials.screen,0,2,-2.65);
+box(1.35,.78,.035,materials.screen,0,2,-2.65);
 box(1.4,.08,.55,materials.metal,0,1.45,-2.5);
-for(let i=0;i<10;i++)box(.09,.035,.09,materials.screen,-.55+i*.12,1.51,-2.3);
+for(let i=0;i<10;i++){
+ box(.09,.035,.09,materials.screen,-.55+i*.12,1.51,-2.3);
+}
 
-/* Forest trees */
+/* FOREST TREES */
 for(let i=0;i<110;i++){
  const a=Math.random()*Math.PI*2;
  const r=9+Math.random()*75;
  const x=Math.cos(a)*r,z=Math.sin(a)*r;
  cylinder(.35,.55,4,materials.bark,x,1.9,z);
  const crown=new THREE.Mesh(new THREE.ConeGeometry(2.3,5,7),materials.leaves);
- crown.position.set(x,5.2,z);crown.castShadow=true;scene.add(crown);
+ crown.position.set(x,5.2,z);
+ crown.castShadow=true;
+ scene.add(crown);
 }
 
-/* Path from the treehouse into the forest */
+/* FOREST PATH */
 for(let i=0;i<12;i++){
  const p=box(2,.08,2,materials.wood,0,.02,5+i*2);
  p.rotation.y=(Math.random()-.5)*.15;
 }
 
-/* Simple gorilla avatar */
+/* GORILLA AVATAR */
 function makeGorilla(color=0x493c36){
  const root=new THREE.Group();
  const fur=new THREE.MeshStandardMaterial({color,roughness:.9});
  const body=new THREE.Mesh(new THREE.SphereGeometry(.38,12,10),fur);
- body.position.y=.85;root.add(body);
+ body.position.y=.85;
+ root.add(body);
  const head=new THREE.Mesh(new THREE.SphereGeometry(.28,12,10),fur);
- head.position.set(0,1.35,0);root.add(head);
+ head.position.set(0,1.35,0);
+ root.add(head);
+
  const eyeMat=new THREE.MeshStandardMaterial({color:0xffffff});
  const pupil=new THREE.MeshStandardMaterial({color:0x080808});
  for(const x of [-.11,.11]){
   const eye=new THREE.Mesh(new THREE.SphereGeometry(.055,8,8),eyeMat);
-  eye.position.set(x,1.4,-.24);root.add(eye);
+  eye.position.set(x,1.4,-.24);
+  root.add(eye);
   const dot=new THREE.Mesh(new THREE.SphereGeometry(.025,8,8),pupil);
-  dot.position.set(x,1.4,-.29);root.add(dot);
+  dot.position.set(x,1.4,-.29);
+  root.add(dot);
  }
- const arms=[];
  for(const side of [-1,1]){
   const arm=new THREE.Mesh(new THREE.CylinderGeometry(.12,.16,.8,8),fur);
-  arm.position.set(side*.48,.85,-.05);arm.rotation.z=side*-.7;root.add(arm);arms.push(arm);
+  arm.position.set(side*.48,.85,-.05);
+  arm.rotation.z=side*-.7;
+  root.add(arm);
  }
- root.userData.arms=arms;
  return root;
 }
+
 const myGorilla=makeGorilla();
 scene.add(myGorilla);
 
-/* Name label */
+/* THE HOLLOW */
+const hollow=makeGorilla(0x100e0e);
+hollow.scale.setScalar(1.35);
+hollow.position.set(13,0,-27);
+scene.add(hollow);
+
+const hollowEyeMat=new THREE.MeshStandardMaterial({
+ color:0xff1717,
+ emissive:0xff0000,
+ emissiveIntensity:3
+});
+for(const side of [-1,1]){
+ const eye=new THREE.Mesh(new THREE.SphereGeometry(.065,10,8),hollowEyeMat);
+ eye.position.set(side*.11,1.9,-.31);
+ hollow.add(eye);
+}
+const hollowLight=new THREE.PointLight(0xff0808,1.4,5);
+hollowLight.position.set(0,1.9,-.4);
+hollow.add(hollowLight);
+
+let hollowMode="watching";
+let hollowLastSeen=0;
+let hollowAttackCooldown=0;
+let hollowTarget=new THREE.Vector3(0,0,0);
+
+function updateHollow(dt){
+ const playerPos=new THREE.Vector3(camera.position.x,0,camera.position.z);
+ const monsterPos=new THREE.Vector3(hollow.position.x,0,hollow.position.z);
+ const distance=playerPos.distanceTo(monsterPos);
+ const now=performance.now();
+
+ if(distance<19){
+  hollowMode="chasing";
+  hollowLastSeen=now;
+  hollowTarget.copy(playerPos);
+ }else if(now-hollowLastSeen>9000){
+  hollowMode="watching";
+ }
+
+ if(hollowMode==="chasing"){
+  const dir=hollowTarget.clone().sub(monsterPos);
+  dir.y=0;
+  if(dir.length()>.05){
+   dir.normalize();
+   hollow.position.addScaledVector(dir,dt*3.15);
+   hollow.rotation.y=Math.atan2(-dir.x,-dir.z);
+  }
+
+  if(distance<1.55 && now>hollowAttackCooldown){
+   hollowAttackCooldown=now+6500;
+   scareEl.style.display="flex";
+   say("THE HOLLOW CAUGHT YOU!");
+   setTimeout(()=>{
+    scareEl.style.display="none";
+    camera.position.set(0,1.65,5);
+    hollow.position.set(13,0,-27);
+    hollowMode="watching";
+    hollowLastSeen=0;
+   },1100);
+  }
+ }else{
+  const t=now*.00012;
+  hollow.position.x=13+Math.sin(t)*2.5;
+  hollow.position.z=-27+Math.cos(t)*2.5;
+  hollow.rotation.y=Math.atan2(
+   -playerPos.x+hollow.position.x,
+   -playerPos.z+hollow.position.z
+  );
+ }
+}
+
+/* PLAYER NAME TAG */
 function makeLabel(text){
  const canvas=document.createElement("canvas");
- canvas.width=512;canvas.height=128;
+ canvas.width=512;
+ canvas.height=128;
  const ctx=canvas.getContext("2d");
  ctx.clearRect(0,0,512,128);
- ctx.font="bold 48px Arial";ctx.textAlign="center";
- ctx.fillStyle="white";ctx.strokeStyle="#101010";ctx.lineWidth=8;
- ctx.strokeText(text,256,78);ctx.fillText(text,256,78);
+ ctx.font="bold 48px Arial";
+ ctx.textAlign="center";
+ ctx.fillStyle="white";
+ ctx.strokeStyle="#101010";
+ ctx.lineWidth=8;
+ ctx.strokeText(text,256,78);
+ ctx.fillText(text,256,78);
  const tex=new THREE.CanvasTexture(canvas);
  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
- sprite.scale.set(1.5,.38,1);sprite.position.y=1.9;
+ sprite.scale.set(1.5,.38,1);
+ sprite.position.y=1.9;
  return sprite;
 }
 
+/* PLAYER PROFILE */
 let playerName=localStorage.getItem("gh_name")||"GORILLA";
 let colorCode=localStorage.getItem("gh_color")||"123";
-nameInput.value=playerName;colorInput.value=colorCode;
-let roomId=null,playerId="p_"+Math.random().toString(36).slice(2,11);
+nameInput.value=playerName;
+colorInput.value=colorCode;
+
+let roomId=null;
 let remotePlayers={};
 let roomListener=null;
 let lastSend=0;
@@ -226,100 +335,208 @@ function colorFromCode(code){
 }
 function updateMyColor(){
  const c=colorFromCode(colorCode);
- myGorilla.traverse(o=>{if(o.isMesh && o.material && o.material.color)o.material.color.copy(c)});
+ myGorilla.traverse(o=>{
+  if(o.isMesh && o.material && o.material.color){
+   if(o.geometry.type==="SphereGeometry" || o.geometry.type==="CylinderGeometry"){
+    if(o.material.color.getHex()!==0xffffff && o.material.color.getHex()!==0x080808){
+     o.material.color.copy(c);
+    }
+   }
+  }
+ });
 }
 updateMyColor();
 
-function say(message){
- noticeEl.textContent=message;
- setTimeout(()=>{if(noticeEl.textContent===message)noticeEl.textContent=""},3000);
+async function saveProfile(){
+ if(!firebaseReady || !playerId)return;
+ await set(ref(db,`users/${playerId}`),{
+  uid:playerId,
+  name:playerName,
+  color:colorCode,
+  updated:Date.now()
+ });
 }
-function setStatus(message){statusEl.textContent=message}
 
-/* Firebase room handling */
+/* CREATE PRIVATE ROOM */
 async function createRoom(){
- if(!firebaseReady){say("Add your Firebase settings first!");return}
- roomId=Math.random().toString(36).slice(2,7).toUpperCase();
- await joinRoom(roomId);
-}
-async function joinRoom(code){
- if(!firebaseReady){say("Firebase is not connected yet.");return}
- code=(code||"").trim().toUpperCase();
- if(!code){say("Enter a room code first.");return}
- roomId=code;
- const playerRef=ref(db,`rooms/${roomId}/players/${playerId}`);
- await set(playerRef,{
-  name:playerName,color:colorCode,
-  x:camera.position.x,y:camera.position.y,z:camera.position.z,
-  ry:camera.rotation.y,updated:Date.now()
- });
- onDisconnect(playerRef).remove();
- if(roomListener)roomListener();
- roomListener=onValue(ref(db,`rooms/${roomId}/players`),snap=>{
-  const players=snap.val()||{};
-  for(const id of Object.keys(remotePlayers)){
-   if(!players[id]){
-    scene.remove(remotePlayers[id].group);
-    delete remotePlayers[id];
-   }
-  }
-  for(const [id,data] of Object.entries(players)){
-   if(id===playerId)continue;
-   if(!remotePlayers[id]){
-    const group=makeGorilla(colorFromCode(data.color||"123").getHex());
-    const label=makeLabel(data.name||"GORILLA");
-    group.add(label);scene.add(group);
-    remotePlayers[id]={group};
-   }
-   const p=remotePlayers[id].group;
-   p.position.set(data.x||0,(data.y||0)-1.5,data.z||0);
-   p.rotation.y=data.ry||0;
-  }
- });
- setStatus("ROOM: "+roomId+" · "+(firebaseReady?"ONLINE":"OFFLINE"));
- say("Joined room "+roomId);
-}
-async function leaveRoom(){
- if(roomId && db){
-  await remove(ref(db,`rooms/${roomId}/players/${playerId}`));
-  if(roomListener)roomListener();
+ if(!firebaseReady || !playerId){
+  say("Firebase account is not ready yet.");
+  return;
  }
- roomId=null;roomListener=null;
- for(const id of Object.keys(remotePlayers)){scene.remove(remotePlayers[id].group);delete remotePlayers[id]}
- setStatus("Not in a room");
+ try{
+  let code;
+  let roomRef;
+  let exists=true;
+  do{
+   code=Math.random().toString(36).slice(2,7).toUpperCase();
+   roomRef=ref(db,`rooms/${code}`);
+   const snap=await get(roomRef);
+   exists=snap.exists();
+  }while(exists);
+
+  await set(roomRef,{createdAt:Date.now(),ownerId:playerId});
+  roomInput.value=code;
+  await joinRoom(code,true);
+ }catch(err){
+  console.error(err);
+  say("Could not create room: "+err.message);
+ }
 }
 
-/* Computer interactions */
+/* JOIN ROOM */
+async function joinRoom(code,justCreated=false){
+ if(!firebaseReady || !playerId){
+  say("Firebase account is not ready yet.");
+  return;
+ }
+ code=(code||"").trim().toUpperCase();
+ if(!/^[A-Z0-9]{4,8}$/.test(code)){
+  say("Enter a valid 4–8 character room code.");
+  return;
+ }
+ try{
+  const roomRef=ref(db,`rooms/${code}`);
+  const roomSnap=await get(roomRef);
+  if(!roomSnap.exists() && !justCreated){
+   say("Room not found. Check the code.");
+   return;
+  }
+
+  if(roomId && roomId!==code)await leaveRoom();
+
+  await saveProfile();
+  const playerRef=ref(db,`rooms/${code}/players/${playerId}`);
+  await set(playerRef,{
+   uid:playerId,
+   name:playerName,
+   color:colorCode,
+   x:camera.position.x,
+   y:camera.position.y,
+   z:camera.position.z,
+   ry:camera.rotation.y,
+   updated:Date.now()
+  });
+  onDisconnect(playerRef).remove();
+
+  roomId=code;
+  if(roomListener)roomListener();
+
+  roomListener=onValue(ref(db,`rooms/${roomId}/players`),snap=>{
+   const players=snap.val()||{};
+
+   for(const id of Object.keys(remotePlayers)){
+    if(!players[id]){
+     scene.remove(remotePlayers[id].group);
+     delete remotePlayers[id];
+    }
+   }
+
+   for(const [id,data] of Object.entries(players)){
+    if(id===playerId)continue;
+
+    if(!remotePlayers[id]){
+     const group=makeGorilla(colorFromCode(data.color||"123").getHex());
+     const label=makeLabel(data.name||"GORILLA");
+     group.add(label);
+     scene.add(group);
+     remotePlayers[id]={group,labelText:data.name||"GORILLA"};
+    }
+
+    const p=remotePlayers[id].group;
+    p.position.set(
+     Number(data.x)||0,
+     (Number(data.y)||1.65)-1.5,
+     Number(data.z)||0
+    );
+    p.rotation.y=Number(data.ry)||0;
+   }
+  });
+
+  setStatus("ROOM: "+roomId+" · ONLINE");
+  say("Joined room "+roomId);
+ }catch(err){
+  console.error(err);
+  say("Could not join room: "+err.message);
+ }
+}
+
+async function leaveRoom(){
+ if(roomId && db && playerId){
+  const oldRoom=roomId;
+  if(roomListener){
+   roomListener();
+   roomListener=null;
+  }
+  await remove(ref(db,`rooms/${oldRoom}/players/${playerId}`));
+ }
+ roomId=null;
+
+ for(const id of Object.keys(remotePlayers)){
+  scene.remove(remotePlayers[id].group);
+  delete remotePlayers[id];
+ }
+ setStatus("ONLINE · Not in a room");
+}
+
+/* COMPUTER BUTTONS */
 document.getElementById("create").onclick=createRoom;
 document.getElementById("join").onclick=()=>joinRoom(roomInput.value);
-document.getElementById("save").onclick=()=>{
+
+document.getElementById("save").onclick=async()=>{
  playerName=nameInput.value.trim().slice(0,16)||"GORILLA";
  colorCode=(colorInput.value.replace(/\D/g,"").slice(0,3)||"123").padStart(3,"0");
- nameInput.value=playerName;colorInput.value=colorCode;
+
+ nameInput.value=playerName;
+ colorInput.value=colorCode;
+
  localStorage.setItem("gh_name",playerName);
  localStorage.setItem("gh_color",colorCode);
- updateMyColor();say("Name and color saved!");
+ updateMyColor();
+
+ try{
+  await saveProfile();
+  if(roomId){
+   await update(ref(db,`rooms/${roomId}/players/${playerId}`),{
+    name:playerName,
+    color:colorCode
+   });
+  }
+  say("Name and color saved!");
+ }catch(err){
+  console.error(err);
+  say("Profile save failed: "+err.message);
+ }
 };
+
 document.getElementById("close").onclick=()=>computer.style.display="none";
 
-const raycaster=new THREE.Raycaster();
 function toggleComputer(){
  computer.style.display=computer.style.display==="block"?"none":"block";
 }
 addEventListener("keydown",e=>{
- if(e.key.toLowerCase()==="e" && !e.repeat)toggleComputer();
+ if(e.key.toLowerCase()==="e" && !e.repeat && document.activeElement.tagName!=="INPUT"){
+  toggleComputer();
+ }
  if(e.key==="Escape")computer.style.display="none";
 });
 
-/* Desktop movement */
+/* DESKTOP MOVEMENT */
 const keys={};
 addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
 addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+
 let yaw=0,pitch=0,mouseLocked=false;
+
 renderer.domElement.addEventListener("click",()=>{
- if(computer.style.display!=="block" && !renderer.xr.isPresenting)renderer.domElement.requestPointerLock?.();
+ if(computer.style.display!=="block" && !renderer.xr.isPresenting){
+  renderer.domElement.requestPointerLock?.();
+ }
 });
-document.addEventListener("pointerlockchange",()=>mouseLocked=document.pointerLockElement===renderer.domElement);
+
+document.addEventListener("pointerlockchange",()=>{
+ mouseLocked=document.pointerLockElement===renderer.domElement;
+});
+
 document.addEventListener("mousemove",e=>{
  if(!mouseLocked)return;
  yaw-=e.movementX*.002;
@@ -328,73 +545,145 @@ document.addEventListener("mousemove",e=>{
  camera.rotation.set(pitch,yaw,0,"YXZ");
 });
 
-/* VR controllers: grip movement moves the player in the direction
-   of the controller's swing. This is a basic V1 movement prototype. */
+/* VR HAND CONTROLLERS */
 const controller0=renderer.xr.getController(0);
 const controller1=renderer.xr.getController(1);
 scene.add(controller0,controller1);
+
+const handSpheres=[0,1].map(()=>{
+ const mesh=new THREE.Mesh(
+  new THREE.SphereGeometry(.105,12,10),
+  new THREE.MeshStandardMaterial({color:0x251d1a,roughness:.85})
+ );
+ scene.add(mesh);
+ return mesh;
+});
+
 let previousHands=[new THREE.Vector3(),new THREE.Vector3()];
 let handReady=[false,false];
+const handRaycaster=new THREE.Raycaster();
+
+function handHasContact(pos){
+ if(pos.y<.52)return true;
+
+ const dirs=[
+  new THREE.Vector3(0,-1,0),
+  new THREE.Vector3(0,1,0),
+  new THREE.Vector3(1,0,0),
+  new THREE.Vector3(-1,0,0),
+  new THREE.Vector3(0,0,1),
+  new THREE.Vector3(0,0,-1)
+ ];
+
+ for(const d of dirs){
+  handRaycaster.set(pos,d);
+  handRaycaster.far=.22;
+  const hits=handRaycaster.intersectObjects(scene.children,true);
+  if(hits.some(h=>h.distance<.2 && h.object!==myGorilla && h.object!==hollow && !handSpheres.includes(h.object))){
+   return true;
+  }
+ }
+ return false;
+}
+
 function handleVRHands(){
  const hands=[controller0,controller1];
- let movement=new THREE.Vector3();
+ const movement=new THREE.Vector3();
+
  hands.forEach((hand,i)=>{
   const pos=new THREE.Vector3();
   hand.getWorldPosition(pos);
-  if(handReady[i]){
-   const delta=previousHands[i].clone().sub(pos);
-   delta.y=0;
-   if(delta.length()<.35)movement.add(delta.multiplyScalar(1.5));
+  handSpheres[i].position.copy(pos);
+
+  if(handReady[i] && handHasContact(pos)){
+   const push=previousHands[i].clone().sub(pos);
+   if(push.length()<.32){
+    movement.add(push.multiplyScalar(2.25));
+   }
   }
-  previousHands[i].copy(pos);handReady[i]=true;
+
+  previousHands[i].copy(pos);
+  handReady[i]=true;
  });
- if(movement.length()>0){
+
+ if(movement.lengthSq()>0){
+  movement.y=0;
   camera.position.add(movement);
  }
 }
 
 /* ENTER VR */
 document.getElementById("vr").onclick=async()=>{
- if(!navigator.xr){say("WebXR is not available in this browser.");return}
+ if(!navigator.xr){
+  say("WebXR is not available in this browser.");
+  return;
+ }
  try{
   const supported=await navigator.xr.isSessionSupported("immersive-vr");
-  if(!supported){say("No compatible VR headset/session found.");return}
-  const session=await navigator.xr.requestSession("immersive-vr",{optionalFeatures:["local-floor","bounded-floor"]});
+  if(!supported){
+   say("No compatible VR headset/session found.");
+   return;
+  }
+
+  const session=await navigator.xr.requestSession("immersive-vr",{
+   optionalFeatures:["local-floor","bounded-floor"]
+  });
+
   await renderer.xr.setSession(session);
   document.getElementById("vr").style.display="none";
-  session.addEventListener("end",()=>document.getElementById("vr").style.display="block");
- }catch(err){say("Could not start VR: "+err.message)}
+  session.addEventListener("end",()=>{
+   document.getElementById("vr").style.display="block";
+  });
+ }catch(err){
+  say("Could not start VR: "+err.message);
+ }
 };
 
-/* Main loop */
+/* MAIN GAME LOOP */
 const clock=new THREE.Clock();
+
 function animate(){
  const dt=Math.min(clock.getDelta(),.05);
+
  if(!renderer.xr.isPresenting && computer.style.display!=="block"){
   const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
   const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
   const speed=4*dt;
+
   if(keys.w)camera.position.addScaledVector(forward,speed);
   if(keys.s)camera.position.addScaledVector(forward,-speed);
   if(keys.a)camera.position.addScaledVector(right,-speed);
   if(keys.d)camera.position.addScaledVector(right,speed);
+
   camera.position.y=1.65;
  }
+
  if(renderer.xr.isPresenting)handleVRHands();
 
- myGorilla.position.set(camera.position.x,camera.position.y-1.5,camera.position.z);
+ updateHollow(dt);
+
+ myGorilla.position.set(
+  camera.position.x,
+  camera.position.y-1.5,
+  camera.position.z
+ );
  myGorilla.rotation.y=camera.rotation.y;
 
- if(roomId && db && Date.now()-lastSend>120){
+ if(roomId && db && playerId && Date.now()-lastSend>100){
   lastSend=Date.now();
+
   update(ref(db,`rooms/${roomId}/players/${playerId}`),{
-   name:playerName,color:colorCode,
-   x:camera.position.x,y:camera.position.y,z:camera.position.z,
-   ry:camera.rotation.y,updated:Date.now()
-  }).catch(()=>{});
+   x:camera.position.x,
+   y:camera.position.y,
+   z:camera.position.z,
+   ry:camera.rotation.y,
+   updated:Date.now()
+  }).catch(err=>console.warn("Player sync failed:",err));
  }
+
  renderer.render(scene,camera);
 }
+
 renderer.setAnimationLoop(animate);
 
 addEventListener("resize",()=>{
@@ -403,7 +692,13 @@ addEventListener("resize",()=>{
  renderer.setSize(innerWidth,innerHeight);
 });
 
-setStatus(firebaseReady?"Firebase ready · Not in a room":"Firebase setup needed");
+if(firebaseReady){
+ setStatus("ONLINE · Player ID: "+playerId.slice(0,8)+" · THE HOLLOW IS OUT THERE");
+ saveProfile().catch(err=>console.warn("Initial profile save:",err));
+}else{
+ setStatus("Firebase sign-in failed · Check setup");
+}
+
 say("Welcome to Gorilla Horror!");
 </script>
 </body>
