@@ -11,17 +11,25 @@ body{margin:0;overflow:hidden;background:#050907;color:white;font-family:Arial,s
 #hud{position:fixed;inset:0;pointer-events:none}
 #top{position:absolute;top:14px;left:14px;text-shadow:0 2px 8px black;font-weight:bold}
 #status{color:#9cff9c;font-size:13px;margin-top:6px}
-#computer{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);background:#101914;border:3px solid #66836a;border-radius:12px;padding:18px;display:none;pointer-events:auto;box-shadow:0 0 35px #000}
+#computer{
+ position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+ width:min(420px,92vw);background:#101914;border:3px solid #66836a;
+ border-radius:12px;padding:18px;display:none;pointer-events:auto;
+ box-shadow:0 0 35px #000;
+}
 #computer h2{margin:0 0 8px;color:#b9ffb5;letter-spacing:3px}
 #computer p{color:#c5d0c5;font-size:13px}
 #computer input{width:100%;padding:12px;margin:5px 0;background:#050b07;color:#baffb6;border:1px solid #6e956f;font-size:17px}
 #computer .choice{padding:12px;margin:7px 0;background:#1b2a20;border:1px solid #526c56;cursor:pointer;color:#d9ffd5}
 #computer .choice:hover{background:#304b35}
 #computer small{color:#9aab9a}
-#vr{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);pointer-events:auto;padding:13px 24px;border:1px solid #9cff9c;background:#122318;color:#d9ffd5;font-weight:bold;border-radius:8px;font-size:16px}
+#vr{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);pointer-events:auto;
+ padding:13px 24px;border:1px solid #9cff9c;background:#122318;color:#d9ffd5;
+ font-weight:bold;border-radius:8px;font-size:16px}
 #help{position:absolute;bottom:18px;left:14px;font-size:12px;color:#d1d8d1;text-shadow:0 2px 5px black}
 #crosshair{position:absolute;left:50%;top:50%;width:5px;height:5px;background:white;border-radius:50%;opacity:.7}
 #notice{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);color:#caffc6;text-shadow:0 2px 5px black;text-align:center;max-width:90vw}
+#scare{animation:none}
 </style>
 </head>
 <body>
@@ -30,7 +38,7 @@ body{margin:0;overflow:hidden;background:#050907;color:white;font-family:Arial,s
  <div id="crosshair"></div>
  <div id="notice"></div>
  <div id="scare" style="display:none;position:absolute;inset:0;background:radial-gradient(circle,#6b0000 0%,#120000 45%,#000 100%);color:#ff2424;align-items:center;justify-content:center;text-align:center;font-size:clamp(38px,10vw,110px);font-weight:900;letter-spacing:8px;text-shadow:0 0 25px red;z-index:20;pointer-events:none">THE HOLLOW</div>
- <div id="help">Desktop: WASD + mouse · VR: push with your hands · E: computer</div>
+ <div id="help">Desktop: WASD + mouse · VR: push hands to move · E: computer</div>
  <button id="vr">ENTER VR</button>
  <div id="computer">
   <h2>GH COMPUTER</h2>
@@ -53,23 +61,27 @@ body{margin:0;overflow:hidden;background:#050907;color:white;font-family:Arial,s
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
 import {
- getDatabase,ref,set,update,get,onValue,onDisconnect,remove
+  getDatabase, ref, set, update, get, onValue, onDisconnect, remove
 } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-database.js";
 import {
- getAuth,setPersistence,browserLocalPersistence,signInAnonymously
+  getAuth, setPersistence, browserLocalPersistence, signInAnonymously
 } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-auth.js";
 
-const firebaseConfig={
- apiKey:"AIzaSyBja698_LRIWtRY93PKjtxYuKATXCAARSM",
- authDomain:"gorilla-horror.firebaseapp.com",
- databaseURL:"https://gorilla-horror-default-rtdb.firebaseio.com",
- projectId:"gorilla-horror",
- storageBucket:"gorilla-horror.firebasestorage.app",
- messagingSenderId:"160658459341",
- appId:"1:160658459341:web:bd8f802bf917fdc818b784"
+/* GORILLA HORROR FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyBja698_LRIWtRY93PKjtxYuKATXCAARSM",
+  authDomain: "gorilla-horror.firebaseapp.com",
+  databaseURL: "https://gorilla-horror-default-rtdb.firebaseio.com",
+  projectId: "gorilla-horror",
+  storageBucket: "gorilla-horror.firebasestorage.app",
+  messagingSenderId: "160658459341",
+  appId: "1:160658459341:web:bd8f802bf917fdc818b784"
 };
 
-let db=null,auth=null,firebaseReady=false,playerId=null;
+let db = null;
+let auth = null;
+let firebaseReady = false;
+let playerId = null;
 
 const statusEl=document.getElementById("status");
 const noticeEl=document.getElementById("notice");
@@ -80,32 +92,45 @@ const nameInput=document.getElementById("playerName");
 const colorInput=document.getElementById("colorCode");
 
 function say(message){
- noticeEl.textContent=message;
- setTimeout(()=>{if(noticeEl.textContent===message)noticeEl.textContent=""},3500);
+  noticeEl.textContent=message;
+  setTimeout(()=>{if(noticeEl.textContent===message)noticeEl.textContent=""},3500);
 }
 function setStatus(message){statusEl.textContent=message}
 
-try{
- const app=initializeApp(firebaseConfig);
- db=getDatabase(app);
- auth=getAuth(app);
- await setPersistence(auth,browserLocalPersistence);
- if(!auth.currentUser)await signInAnonymously(auth);
- playerId=auth.currentUser.uid;
- firebaseReady=true;
- setStatus("Firebase connected · Loading player...");
-}catch(err){
- console.error("Firebase startup error:",err);
- setStatus("Firebase error · Check console");
+/* Firebase anonymous sign-in */
+try {
+  const app = initializeApp(firebaseConfig);
+  db = getDatabase(app);
+  auth = getAuth(app);
+  await setPersistence(auth, browserLocalPersistence);
+  if (!auth.currentUser) await signInAnonymously(auth);
+  playerId = auth.currentUser.uid;
+  firebaseReady = true;
+  console.log("Gorilla Horror player UID:", playerId);
+  setStatus("Firebase connected · Loading player...");
+} catch (err) {
+  console.error("Firebase startup error:", err);
+  setStatus("Firebase error · Check console");
 }
 
-/* 3D WORLD */
+/* THREE.JS WORLD */
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x07120c);
 scene.fog=new THREE.FogExp2(0x07120c,0.035);
 
 const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,500);
-camera.position.set(0,1.65,5);
+const playerRig=new THREE.Group();
+scene.add(playerRig);
+playerRig.add(camera);
+
+// Floor-level player rig; camera is at normal desktop eye height.
+camera.position.set(0,1.65,0);
+playerRig.position.set(0,0,5);
+
+function getPlayerWorldPosition(target=new THREE.Vector3()){
+ camera.getWorldPosition(target);
+ return target;
+}
 
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
@@ -138,6 +163,7 @@ function box(w,h,d,mat,x,y,z){
  scene.add(m);
  return m;
 }
+
 function cylinder(rt,rb,h,mat,x,y,z){
  const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,8),mat);
  m.position.set(x,y,z);
@@ -147,13 +173,16 @@ function cylinder(rt,rb,h,mat,x,y,z){
 }
 
 /* FOREST FLOOR */
-const floor=new THREE.Mesh(new THREE.PlaneGeometry(300,300),materials.ground);
+const floor=new THREE.Mesh(
+ new THREE.PlaneGeometry(300,300),
+ materials.ground
+);
 floor.rotation.x=-Math.PI/2;
 floor.position.y=-.08;
 floor.receiveShadow=true;
 scene.add(floor);
 
-/* TREEHOUSE STARTING AREA */
+/* STARTING TREEHOUSE */
 box(8,.35,8,materials.wood,0,2.8,0);
 box(.25,3,.25,materials.bark,-3.5,1.3,-3.5);
 box(.25,3,.25,materials.bark,3.5,1.3,-3.5);
@@ -164,7 +193,7 @@ box(8,.25,.3,materials.wood,0,1.5,3.8);
 box(.3,.25,8,materials.wood,-3.8,1.5,0);
 box(.3,.25,8,materials.wood,3.8,1.5,0);
 
-/* COMPUTER DESK */
+/* COMPUTER DESK AND MONITOR */
 box(2.4,.18,.9,materials.wood,0,1.3,-2.5);
 box(.18,1.2,.18,materials.wood,-.9,.7,-2.5);
 box(.18,1.2,.18,materials.wood,.9,.7,-2.5);
@@ -179,15 +208,19 @@ for(let i=0;i<10;i++){
 for(let i=0;i<110;i++){
  const a=Math.random()*Math.PI*2;
  const r=9+Math.random()*75;
- const x=Math.cos(a)*r,z=Math.sin(a)*r;
+ const x=Math.cos(a)*r;
+ const z=Math.sin(a)*r;
  cylinder(.35,.55,4,materials.bark,x,1.9,z);
- const crown=new THREE.Mesh(new THREE.ConeGeometry(2.3,5,7),materials.leaves);
+ const crown=new THREE.Mesh(
+  new THREE.ConeGeometry(2.3,5,7),
+  materials.leaves
+ );
  crown.position.set(x,5.2,z);
  crown.castShadow=true;
  scene.add(crown);
 }
 
-/* FOREST PATH */
+/* PATH */
 for(let i=0;i<12;i++){
  const p=box(2,.08,2,materials.wood,0,.02,5+i*2);
  p.rotation.y=(Math.random()-.5)*.15;
@@ -200,22 +233,29 @@ function makeGorilla(color=0x493c36){
  const body=new THREE.Mesh(new THREE.SphereGeometry(.38,12,10),fur);
  body.position.y=.85;
  root.add(body);
+
  const head=new THREE.Mesh(new THREE.SphereGeometry(.28,12,10),fur);
  head.position.set(0,1.35,0);
  root.add(head);
 
  const eyeMat=new THREE.MeshStandardMaterial({color:0xffffff});
  const pupil=new THREE.MeshStandardMaterial({color:0x080808});
+
  for(const x of [-.11,.11]){
   const eye=new THREE.Mesh(new THREE.SphereGeometry(.055,8,8),eyeMat);
   eye.position.set(x,1.4,-.24);
   root.add(eye);
+
   const dot=new THREE.Mesh(new THREE.SphereGeometry(.025,8,8),pupil);
   dot.position.set(x,1.4,-.29);
   root.add(dot);
  }
+
  for(const side of [-1,1]){
-  const arm=new THREE.Mesh(new THREE.CylinderGeometry(.12,.16,.8,8),fur);
+  const arm=new THREE.Mesh(
+   new THREE.CylinderGeometry(.12,.16,.8,8),
+   fur
+  );
   arm.position.set(side*.48,.85,-.05);
   arm.rotation.z=side*-.7;
   root.add(arm);
@@ -237,11 +277,13 @@ const hollowEyeMat=new THREE.MeshStandardMaterial({
  emissive:0xff0000,
  emissiveIntensity:3
 });
+
 for(const side of [-1,1]){
  const eye=new THREE.Mesh(new THREE.SphereGeometry(.065,10,8),hollowEyeMat);
  eye.position.set(side*.11,1.9,-.31);
  hollow.add(eye);
 }
+
 const hollowLight=new THREE.PointLight(0xff0808,1.4,5);
 hollowLight.position.set(0,1.9,-.4);
 hollow.add(hollowLight);
@@ -252,7 +294,9 @@ let hollowAttackCooldown=0;
 let hollowTarget=new THREE.Vector3(0,0,0);
 
 function updateHollow(dt){
- const playerPos=new THREE.Vector3(camera.position.x,0,camera.position.z);
+ const playerPos=getPlayerWorldPosition(new THREE.Vector3());
+ playerPos.y=0;
+
  const monsterPos=new THREE.Vector3(hollow.position.x,0,hollow.position.z);
  const distance=playerPos.distanceTo(monsterPos);
  const now=performance.now();
@@ -268,6 +312,7 @@ function updateHollow(dt){
  if(hollowMode==="chasing"){
   const dir=hollowTarget.clone().sub(monsterPos);
   dir.y=0;
+
   if(dir.length()>.05){
    dir.normalize();
    hollow.position.addScaledVector(dir,dt*3.15);
@@ -278,9 +323,11 @@ function updateHollow(dt){
    hollowAttackCooldown=now+6500;
    scareEl.style.display="flex";
    say("THE HOLLOW CAUGHT YOU!");
+
    setTimeout(()=>{
     scareEl.style.display="none";
-    camera.position.set(0,1.65,5);
+    playerRig.position.set(0,0,5);
+    camera.position.set(0,1.65,0);
     hollow.position.set(13,0,-27);
     hollowMode="watching";
     hollowLastSeen=0;
@@ -297,7 +344,7 @@ function updateHollow(dt){
  }
 }
 
-/* PLAYER NAME TAG */
+/* PLAYER NAME LABEL */
 function makeLabel(text){
  const canvas=document.createElement("canvas");
  canvas.width=512;
@@ -311,14 +358,16 @@ function makeLabel(text){
  ctx.lineWidth=8;
  ctx.strokeText(text,256,78);
  ctx.fillText(text,256,78);
+
  const tex=new THREE.CanvasTexture(canvas);
- const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
+ const sprite=new THREE.Sprite(
+  new THREE.SpriteMaterial({map:tex,transparent:true})
+ );
  sprite.scale.set(1.5,.38,1);
  sprite.position.y=1.9;
  return sprite;
 }
 
-/* PLAYER PROFILE */
 let playerName=localStorage.getItem("gh_name")||"GORILLA";
 let colorCode=localStorage.getItem("gh_color")||"123";
 nameInput.value=playerName;
@@ -333,12 +382,14 @@ function colorFromCode(code){
  const n=Math.max(0,Math.min(999,parseInt(code)||0));
  return new THREE.Color(`hsl(${(n*37)%360},55%,45%)`);
 }
+
 function updateMyColor(){
  const c=colorFromCode(colorCode);
  myGorilla.traverse(o=>{
   if(o.isMesh && o.material && o.material.color){
    if(o.geometry.type==="SphereGeometry" || o.geometry.type==="CylinderGeometry"){
-    if(o.material.color.getHex()!==0xffffff && o.material.color.getHex()!==0x080808){
+    if(o.material.color.getHex()!==0xffffff &&
+       o.material.color.getHex()!==0x080808){
      o.material.color.copy(c);
     }
    }
@@ -357,16 +408,18 @@ async function saveProfile(){
  });
 }
 
-/* CREATE PRIVATE ROOM */
+/* FIREBASE ROOMS */
 async function createRoom(){
  if(!firebaseReady || !playerId){
   say("Firebase account is not ready yet.");
   return;
  }
+
  try{
   let code;
   let roomRef;
   let exists=true;
+
   do{
    code=Math.random().toString(36).slice(2,7).toUpperCase();
    roomRef=ref(db,`rooms/${code}`);
@@ -383,20 +436,23 @@ async function createRoom(){
  }
 }
 
-/* JOIN ROOM */
 async function joinRoom(code,justCreated=false){
  if(!firebaseReady || !playerId){
   say("Firebase account is not ready yet.");
   return;
  }
+
  code=(code||"").trim().toUpperCase();
+
  if(!/^[A-Z0-9]{4,8}$/.test(code)){
   say("Enter a valid 4–8 character room code.");
   return;
  }
+
  try{
   const roomRef=ref(db,`rooms/${code}`);
   const roomSnap=await get(roomRef);
+
   if(!roomSnap.exists() && !justCreated){
    say("Room not found. Check the code.");
    return;
@@ -405,20 +461,23 @@ async function joinRoom(code,justCreated=false){
   if(roomId && roomId!==code)await leaveRoom();
 
   await saveProfile();
+
   const playerRef=ref(db,`rooms/${code}/players/${playerId}`);
+
   await set(playerRef,{
    uid:playerId,
    name:playerName,
    color:colorCode,
-   x:camera.position.x,
-   y:camera.position.y,
-   z:camera.position.z,
+   x:getPlayerWorldPosition().x,
+   y:getPlayerWorldPosition().y,
+   z:getPlayerWorldPosition().z,
    ry:camera.rotation.y,
    updated:Date.now()
   });
-  onDisconnect(playerRef).remove();
 
+  onDisconnect(playerRef).remove();
   roomId=code;
+
   if(roomListener)roomListener();
 
   roomListener=onValue(ref(db,`rooms/${roomId}/players`),snap=>{
@@ -439,7 +498,10 @@ async function joinRoom(code,justCreated=false){
      const label=makeLabel(data.name||"GORILLA");
      group.add(label);
      scene.add(group);
-     remotePlayers[id]={group,labelText:data.name||"GORILLA"};
+     remotePlayers[id]={
+      group,
+      labelText:data.name||"GORILLA"
+     };
     }
 
     const p=remotePlayers[id].group;
@@ -463,22 +525,26 @@ async function joinRoom(code,justCreated=false){
 async function leaveRoom(){
  if(roomId && db && playerId){
   const oldRoom=roomId;
+
   if(roomListener){
    roomListener();
    roomListener=null;
   }
+
   await remove(ref(db,`rooms/${oldRoom}/players/${playerId}`));
  }
+
  roomId=null;
 
  for(const id of Object.keys(remotePlayers)){
   scene.remove(remotePlayers[id].group);
   delete remotePlayers[id];
  }
+
  setStatus("ONLINE · Not in a room");
 }
 
-/* COMPUTER BUTTONS */
+/* COMPUTER INTERACTIONS */
 document.getElementById("create").onclick=createRoom;
 document.getElementById("join").onclick=()=>joinRoom(roomInput.value);
 
@@ -491,16 +557,19 @@ document.getElementById("save").onclick=async()=>{
 
  localStorage.setItem("gh_name",playerName);
  localStorage.setItem("gh_color",colorCode);
+
  updateMyColor();
 
  try{
   await saveProfile();
+
   if(roomId){
    await update(ref(db,`rooms/${roomId}/players/${playerId}`),{
     name:playerName,
     color:colorCode
    });
   }
+
   say("Name and color saved!");
  }catch(err){
   console.error(err);
@@ -513,10 +582,13 @@ document.getElementById("close").onclick=()=>computer.style.display="none";
 function toggleComputer(){
  computer.style.display=computer.style.display==="block"?"none":"block";
 }
+
 addEventListener("keydown",e=>{
- if(e.key.toLowerCase()==="e" && !e.repeat && document.activeElement.tagName!=="INPUT"){
+ if(e.key.toLowerCase()==="e" && !e.repeat &&
+    !["INPUT"].includes(document.activeElement.tagName)){
   toggleComputer();
  }
+
  if(e.key==="Escape")computer.style.display="none";
 });
 
@@ -539,25 +611,57 @@ document.addEventListener("pointerlockchange",()=>{
 
 document.addEventListener("mousemove",e=>{
  if(!mouseLocked)return;
+
  yaw-=e.movementX*.002;
  pitch-=e.movementY*.002;
  pitch=Math.max(-1.3,Math.min(1.3,pitch));
  camera.rotation.set(pitch,yaw,0,"YXZ");
 });
 
-/* VR HAND CONTROLLERS */
+/* VR ARM LOCOMOTION */
 const controller0=renderer.xr.getController(0);
 const controller1=renderer.xr.getController(1);
-scene.add(controller0,controller1);
+playerRig.add(controller0,controller1);
+
+const handMaterial=new THREE.MeshStandardMaterial({
+ color:0x251d1a,
+ roughness:.85
+});
+
+const armMaterial=new THREE.MeshStandardMaterial({
+ color:0x211b19,
+ roughness:.95
+});
 
 const handSpheres=[0,1].map(()=>{
  const mesh=new THREE.Mesh(
-  new THREE.SphereGeometry(.105,12,10),
-  new THREE.MeshStandardMaterial({color:0x251d1a,roughness:.85})
+  new THREE.SphereGeometry(.105,14,12),
+  handMaterial
  );
  scene.add(mesh);
  return mesh;
 });
+
+const armMeshes=[0,1].map(()=>{
+ const mesh=new THREE.Mesh(
+  new THREE.CylinderGeometry(.085,.12,1,10),
+  armMaterial
+ );
+ mesh.castShadow=true;
+ scene.add(mesh);
+ return mesh;
+});
+
+const armUp=new THREE.Vector3(0,1,0);
+
+function placeArm(mesh,start,end){
+ const delta=end.clone().sub(start);
+ const length=Math.max(.08,delta.length());
+
+ mesh.position.copy(start).add(end).multiplyScalar(.5);
+ mesh.scale.set(1,length,1);
+ mesh.quaternion.setFromUnitVectors(armUp,delta.normalize());
+}
 
 let previousHands=[new THREE.Vector3(),new THREE.Vector3()];
 let handReady=[false,false];
@@ -578,25 +682,41 @@ function handHasContact(pos){
  for(const d of dirs){
   handRaycaster.set(pos,d);
   handRaycaster.far=.22;
+
   const hits=handRaycaster.intersectObjects(scene.children,true);
-  if(hits.some(h=>h.distance<.2 && h.object!==myGorilla && h.object!==hollow && !handSpheres.includes(h.object))){
+
+  if(hits.some(h=>
+   h.distance<.2 &&
+   h.object!==myGorilla &&
+   h.object!==hollow &&
+   !handSpheres.includes(h.object)
+  )){
    return true;
   }
  }
+
  return false;
 }
 
 function handleVRHands(){
  const hands=[controller0,controller1];
  const movement=new THREE.Vector3();
+ const head=getPlayerWorldPosition(new THREE.Vector3());
 
  hands.forEach((hand,i)=>{
   const pos=new THREE.Vector3();
   hand.getWorldPosition(pos);
   handSpheres[i].position.copy(pos);
 
+  const shoulder=head.clone().add(
+   new THREE.Vector3(i===0?-.23:.23,-.28,.02)
+  );
+
+  placeArm(armMeshes[i],shoulder,pos);
+
   if(handReady[i] && handHasContact(pos)){
    const push=previousHands[i].clone().sub(pos);
+
    if(push.length()<.32){
     movement.add(push.multiplyScalar(2.25));
    }
@@ -608,7 +728,7 @@ function handleVRHands(){
 
  if(movement.lengthSq()>0){
   movement.y=0;
-  camera.position.add(movement);
+  playerRig.position.add(movement);
  }
 }
 
@@ -618,8 +738,10 @@ document.getElementById("vr").onclick=async()=>{
   say("WebXR is not available in this browser.");
   return;
  }
+
  try{
   const supported=await navigator.xr.isSessionSupported("immersive-vr");
+
   if(!supported){
    say("No compatible VR headset/session found.");
    return;
@@ -629,8 +751,12 @@ document.getElementById("vr").onclick=async()=>{
    optionalFeatures:["local-floor","bounded-floor"]
   });
 
+  renderer.xr.setReferenceSpaceType("local-floor");
   await renderer.xr.setSession(session);
+  handReady=[false,false];
+
   document.getElementById("vr").style.display="none";
+
   session.addEventListener("end",()=>{
    document.getElementById("vr").style.display="block";
   });
@@ -639,7 +765,7 @@ document.getElementById("vr").onclick=async()=>{
  }
 };
 
-/* MAIN GAME LOOP */
+/* MAIN LOOP */
 const clock=new THREE.Clock();
 
 function animate(){
@@ -650,10 +776,10 @@ function animate(){
   const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
   const speed=4*dt;
 
-  if(keys.w)camera.position.addScaledVector(forward,speed);
-  if(keys.s)camera.position.addScaledVector(forward,-speed);
-  if(keys.a)camera.position.addScaledVector(right,-speed);
-  if(keys.d)camera.position.addScaledVector(right,speed);
+  if(keys.w)playerRig.position.addScaledVector(forward,speed);
+  if(keys.s)playerRig.position.addScaledVector(forward,-speed);
+  if(keys.a)playerRig.position.addScaledVector(right,-speed);
+  if(keys.d)playerRig.position.addScaledVector(right,speed);
 
   camera.position.y=1.65;
  }
@@ -662,20 +788,23 @@ function animate(){
 
  updateHollow(dt);
 
+ const playerWorld=getPlayerWorldPosition(new THREE.Vector3());
+
  myGorilla.position.set(
-  camera.position.x,
-  camera.position.y-1.5,
-  camera.position.z
+  playerWorld.x,
+  playerWorld.y-1.5,
+  playerWorld.z
  );
+
  myGorilla.rotation.y=camera.rotation.y;
 
  if(roomId && db && playerId && Date.now()-lastSend>100){
   lastSend=Date.now();
 
   update(ref(db,`rooms/${roomId}/players/${playerId}`),{
-   x:camera.position.x,
-   y:camera.position.y,
-   z:camera.position.z,
+   x:playerWorld.x,
+   y:playerWorld.y,
+   z:playerWorld.z,
    ry:camera.rotation.y,
    updated:Date.now()
   }).catch(err=>console.warn("Player sync failed:",err));
