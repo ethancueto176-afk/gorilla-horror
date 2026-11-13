@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -444,8 +443,6 @@ function updateMyColor(){
  });
 }
 
-updateMyColor();
-
 /* PROFILE SAVE */
 async function saveProfile(){
  if(!firebaseReady||!playerId)return;
@@ -734,6 +731,9 @@ function placeArm(mesh,start,end){
 const previousHands=[new THREE.Vector3(),new THREE.Vector3()];
 const handReady=[false,false];
 const handRaycaster=new THREE.Raycaster();
+
+/* FIX: Sprite raycasts need the active camera. */
+handRaycaster.camera=camera;
 
 function handHasContact(position){
  if(position.y<.52)return true;
