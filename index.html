@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -69,12 +70,12 @@ canvas{display:block;width:100%;height:100%}
  </div>
 </div>
 
-<!-- Error handler is installed BEFORE the game module starts. -->
 <div id="startupError">
  <h2>GORILLA HORROR — STARTUP ERROR</h2>
  <p>The code encountered an error while starting. Send this message so it can be diagnosed:</p>
  <pre id="startupErrorText"></pre>
 </div>
+
 <script>
 (function(){
  function showStartupError(error){
@@ -134,7 +135,7 @@ const firebaseConfig={
  appId:"1:160658459341:web:bd8f802bf917fdc818b784"
 };
 
-/* THREE.JS WORLD — BUILDS WITHOUT WAITING FOR FIREBASE */
+/* THREE.JS WORLD */
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x07120c);
 scene.fog=new THREE.FogExp2(0x07120c,0.035);
@@ -698,22 +699,32 @@ document.addEventListener("mousemove",event=>{
  camera.rotation.set(pitch,yaw,0,"YXZ");
 });
 
-/* VR ARM LOCOMOTION */
+/* VR ARM LOCOMOTION — SLOWED AND SMOOTHED */
 const controller0=renderer.xr.getController(0);
 const controller1=renderer.xr.getController(1);
 playerRig.add(controller0,controller1);
 
-const handMaterial=new THREE.MeshStandardMaterial({color:0x251d1a,roughness:.85});
-const armMaterial=new THREE.MeshStandardMaterial({color:0x211b19,roughness:.95});
+const handMaterial=new THREE.MeshStandardMaterial({
+ color:0x251d1a,roughness:.85
+});
+const armMaterial=new THREE.MeshStandardMaterial({
+ color:0x211b19,roughness:.95
+});
 
 const handSpheres=[0,1].map(()=>{
- const mesh=new THREE.Mesh(new THREE.SphereGeometry(.105,14,12),handMaterial);
+ const mesh=new THREE.Mesh(
+  new THREE.SphereGeometry(.105,14,12),
+  handMaterial
+ );
  scene.add(mesh);
  return mesh;
 });
 
 const armMeshes=[0,1].map(()=>{
- const mesh=new THREE.Mesh(new THREE.CylinderGeometry(.085,.12,1,10),armMaterial);
+ const mesh=new THREE.Mesh(
+  new THREE.CylinderGeometry(.085,.12,1,10),
+  armMaterial
+ );
  scene.add(mesh);
  return mesh;
 });
@@ -731,9 +742,14 @@ function placeArm(mesh,start,end){
 const previousHands=[new THREE.Vector3(),new THREE.Vector3()];
 const handReady=[false,false];
 const handRaycaster=new THREE.Raycaster();
-
-/* FIX: Sprite raycasts need the active camera. */
 handRaycaster.camera=camera;
+
+/* MOVEMENT CONTROL SETTINGS */
+const HAND_DEADZONE=.008;
+const HAND_SENSITIVITY=.85;
+const MAX_HAND_SPEED=2.0;
+const MOVEMENT_SMOOTHING=.65;
+const smoothedMovement=new THREE.Vector3();
 
 function handHasContact(position){
  if(position.y<.52)return true;
@@ -750,12 +766,15 @@ function handHasContact(position){
  for(const direction of directions){
   handRaycaster.set(position,direction);
   handRaycaster.far=.22;
+
   const hits=handRaycaster.intersectObjects(scene.children,true);
+
   if(hits.some(hit=>
    hit.distance<.2&&
    hit.object!==myGorilla&&
    hit.object!==hollow&&
-   !handSpheres.includes(hit.object)
+   !handSpheres.includes(hit.object)&&
+   !armMeshes.includes(hit.object)
   )){
    return true;
   }
@@ -763,7 +782,7 @@ function handHasContact(position){
  return false;
 }
 
-function handleVRHands(){
+function handleVRHands(dt){
  const hands=[controller0,controller1];
  const movement=new THREE.Vector3();
  const head=getPlayerWorldPosition(new THREE.Vector3());
@@ -780,8 +799,11 @@ function handleVRHands(){
 
   if(handReady[index]&&handHasContact(position)){
    const push=previousHands[index].clone().sub(position);
-   if(push.length()<.32){
-    movement.add(push.multiplyScalar(2.25));
+
+   /* Ignore very small controller movements. */
+   if(push.length()>HAND_DEADZONE){
+    push.multiplyScalar(HAND_SENSITIVITY);
+    movement.add(push);
    }
   }
 
@@ -789,10 +811,14 @@ function handleVRHands(){
   handReady[index]=true;
  });
 
- if(movement.lengthSq()>0){
-  movement.y=0;
-  playerRig.position.add(movement);
- }
+ /* Keep movement horizontal and limit speed by elapsed time. */
+ movement.y=0;
+ movement.clampLength(0,MAX_HAND_SPEED*dt);
+
+ /* Smooth movement to remove sudden jolts. */
+ smoothedMovement.lerp(movement,MOVEMENT_SMOOTHING);
+
+ playerRig.position.add(smoothedMovement);
 }
 
 /* ENTER VR */
@@ -814,12 +840,16 @@ document.getElementById("vr").onclick=async()=>{
 
   renderer.xr.setReferenceSpaceType("local-floor");
   await renderer.xr.setSession(session);
+
   handReady[0]=false;
   handReady[1]=false;
+  smoothedMovement.set(0,0,0);
+
   document.getElementById("vr").style.display="none";
 
   session.addEventListener("end",()=>{
    document.getElementById("vr").style.display="block";
+   smoothedMovement.set(0,0,0);
   });
  }catch(error){
   console.error(error);
@@ -846,7 +876,7 @@ function animate(){
   camera.position.y=1.65;
  }
 
- if(renderer.xr.isPresenting)handleVRHands();
+ if(renderer.xr.isPresenting)handleVRHands(dt);
 
  updateHollow(dt);
 
@@ -881,7 +911,7 @@ addEventListener("resize",()=>{
  renderer.setSize(innerWidth,innerHeight);
 });
 
-/* FIREBASE STARTUP — RUNS AFTER THE 3D WORLD IS READY */
+/* FIREBASE STARTUP — UNCHANGED */
 async function startFirebase(){
  try{
   setStatus("WORLD READY · Connecting to multiplayer...");
